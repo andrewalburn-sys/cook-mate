@@ -100,21 +100,23 @@ export function useVoiceAssistant() {
 
     dc.onopen = () => {
       console.log('[dc] data channel opened');
-      dc.send(JSON.stringify({
-        type: 'conversation.item.create',
-        item: {
-          type: 'message',
-          role: 'user',
-          content: [{ type: 'input_text', text: '(cooking session started)' }],
-        },
-      }));
-      dc.send(JSON.stringify({ type: 'response.create' }));
     };
 
     dc.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data);
-        console.log('[dc msg]', event.type, event.error ?? '');
+        // Wait for session.created before sending any messages
+        if (event.type === 'session.created') {
+          dc.send(JSON.stringify({
+            type: 'conversation.item.create',
+            item: {
+              type: 'message',
+              role: 'user',
+              content: [{ type: 'input_text', text: '(cooking session started)' }],
+            },
+          }));
+          dc.send(JSON.stringify({ type: 'response.create' }));
+        }
         // Track listening vs speaking state
         if (event.type === 'input_audio_buffer.speech_started') setVoiceActivity('listening');
         if (event.type === 'input_audio_buffer.speech_stopped') setVoiceActivity('idle');
