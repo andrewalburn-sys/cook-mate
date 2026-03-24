@@ -105,6 +105,7 @@ export function useVoiceAssistant() {
     dc.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data);
+        console.log('[dc msg]', event.type, event.error ? JSON.stringify(event.error) : '');
         // Wait for session.created before sending any messages
         if (event.type === 'session.created') {
           dc.send(JSON.stringify({
