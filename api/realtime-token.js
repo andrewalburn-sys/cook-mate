@@ -64,6 +64,7 @@ export default async function handler(req, res) {
     }
 
     const session = await response.json();
+    console.log('[realtime-token] expires_at:', session.expires_at, 'client_secret expires_at:', session.client_secret?.expires_at);
     // Return only what the client needs
     return res.status(200).json({
       client_secret: session.client_secret,

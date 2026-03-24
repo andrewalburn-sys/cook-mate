@@ -76,6 +76,7 @@ const server = http.createServer(async (req, res) => {
     }
     return;
   }
+
   const routeMatch = url.pathname.match(/^\/api\/(.+)$/);
   if (!routeMatch) {
     res.writeHead(404);

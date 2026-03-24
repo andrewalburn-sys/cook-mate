@@ -11,6 +11,10 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      '/openai-realtime': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
 })
