@@ -18,11 +18,17 @@ export function useVoiceAssistant() {
   const pcRef = useRef(null);       // RTCPeerConnection
   const dcRef = useRef(null);       // RTCDataChannel
   const streamRef = useRef(null);   // local microphone MediaStream
+  const audioElRef = useRef(null);  // audio element for AI speech
 
   const stop = useCallback(() => {
     dcRef.current?.close();
     pcRef.current?.close();
     streamRef.current?.getTracks().forEach((t) => t.stop());
+    if (audioElRef.current) {
+      audioElRef.current.srcObject = null;
+      audioElRef.current.remove();
+      audioElRef.current = null;
+    }
     dcRef.current = null;
     pcRef.current = null;
     streamRef.current = null;
@@ -73,10 +79,16 @@ export function useVoiceAssistant() {
     pcRef.current = pc;
 
     // Receive AI audio and play it
-    const audioEl = new Audio();
+    // Attach to DOM so browser autoplay policy is satisfied on HTTPS
+    const audioEl = document.createElement('audio');
     audioEl.autoplay = true;
+    audioEl.style.display = 'none';
+    document.body.appendChild(audioEl);
+    audioElRef.current = audioEl;
     pc.ontrack = (e) => {
+      console.log('[audio] track received');
       audioEl.srcObject = e.streams[0];
+      audioEl.play().catch((err) => console.error('[audio] play blocked:', err));
     };
 
     // Send mic audio to OpenAI
@@ -87,6 +99,7 @@ export function useVoiceAssistant() {
     dcRef.current = dc;
 
     dc.onopen = () => {
+      console.log('[dc] data channel opened');
       dc.send(JSON.stringify({
         type: 'conversation.item.create',
         item: {
