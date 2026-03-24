@@ -1,6 +1,6 @@
 // Vercel Serverless Function — handles both session creation and SDP exchange
 // server-side to avoid CORS issues with direct browser-to-OpenAI requests.
-export const config = { runtime: 'nodejs' };
+export const config = { runtime: 'nodejs', maxDuration: 30 };
 
 const MODEL = 'gpt-4o-realtime-preview-2024-12-17';
 
