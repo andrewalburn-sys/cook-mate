@@ -114,6 +114,7 @@ export function useVoiceAssistant() {
     dc.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data);
+        console.log('[dc msg]', event.type, event.error ?? '');
         // Track listening vs speaking state
         if (event.type === 'input_audio_buffer.speech_started') setVoiceActivity('listening');
         if (event.type === 'input_audio_buffer.speech_stopped') setVoiceActivity('idle');
