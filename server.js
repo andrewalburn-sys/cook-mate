@@ -42,12 +42,40 @@ function createResShim(res) {
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type' });
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' });
     res.end();
     return;
   }
 
   const url = new URL(req.url, `http://localhost:${PORT}`);
+
+  // Proxy /openai-realtime → OpenAI Realtime API (mirrors Vercel rewrite)
+  if (url.pathname === '/openai-realtime') {
+    const model = url.searchParams.get('model') || 'gpt-4o-realtime-preview';
+    const rawBody = await new Promise((resolve) => {
+      let data = '';
+      req.on('data', (chunk) => (data += chunk));
+      req.on('end', () => resolve(data));
+    });
+    try {
+      const response = await fetch(`https://api.openai.com/v1/realtime?model=${model}`, {
+        method: 'POST',
+        headers: {
+          Authorization: req.headers['authorization'] || '',
+          'Content-Type': 'application/sdp',
+        },
+        body: rawBody,
+      });
+      const sdpAnswer = await response.text();
+      res.writeHead(response.status, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+      res.end(sdpAnswer);
+    } catch (err) {
+      console.error('[openai-realtime proxy] Error:', err);
+      res.writeHead(502);
+      res.end('Proxy error');
+    }
+    return;
+  }
   const routeMatch = url.pathname.match(/^\/api\/(.+)$/);
   if (!routeMatch) {
     res.writeHead(404);

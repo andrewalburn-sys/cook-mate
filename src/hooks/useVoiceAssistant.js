@@ -130,14 +130,20 @@ export function useVoiceAssistant() {
     await pc.setLocalDescription(offer);
 
     try {
-      const sdpRes = await fetch('/api/realtime-sdp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sdp: offer.sdp, token: clientSecret }),
-      });
-      if (!sdpRes.ok) throw new Error(await sdpRes.text());
-      const { sdpAnswer } = await sdpRes.json();
-      await pc.setRemoteDescription({ type: 'answer', sdp: sdpAnswer });
+      const sdpRes = await fetch(
+        '/openai-realtime?model=gpt-4o-realtime-preview',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${clientSecret}`,
+            'Content-Type': 'application/sdp',
+          },
+          body: offer.sdp,
+        }
+      );
+      if (!sdpRes.ok) throw new Error(`SDP ${sdpRes.status}`);
+      const answerSdp = await sdpRes.text();
+      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
     } catch (err) {
       console.error('SDP error:', err);
       setError('Voice assistant unavailable. Please try again.');
