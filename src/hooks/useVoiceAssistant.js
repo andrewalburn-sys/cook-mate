@@ -47,7 +47,28 @@ export function useVoiceAssistant() {
       return;
     }
 
-    // 2. Set up WebRTC peer connection
+    // 2. Fetch ephemeral token from our serverless function
+    let clientSecret;
+    try {
+      const systemPrompt = buildSystemPrompt(recipe);
+      const res = await fetch('/api/realtime-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemPrompt }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      clientSecret = data.client_secret?.value;
+      if (!clientSecret) throw new Error('No client secret returned');
+    } catch (err) {
+      console.error('Token error:', err);
+      setError('Voice assistant unavailable. Please try again.');
+      setStatus('error');
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+
+    // 3. Set up WebRTC peer connection
     const pc = new RTCPeerConnection();
     pcRef.current = pc;
 
@@ -61,12 +82,11 @@ export function useVoiceAssistant() {
     // Send mic audio to OpenAI
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-    // 3. Open a data channel for events (function calls, transcripts, etc.)
+    // 4. Open a data channel for events (function calls, transcripts, etc.)
     const dc = pc.createDataChannel('oai-events');
     dcRef.current = dc;
 
     dc.onopen = () => {
-      console.log('[dc] data channel opened');
       dc.send(JSON.stringify({
         type: 'conversation.item.create',
         item: {
@@ -77,9 +97,6 @@ export function useVoiceAssistant() {
       }));
       dc.send(JSON.stringify({ type: 'response.create' }));
     };
-
-    dc.onerror = (e) => console.error('[dc] error', e);
-    dc.onclose = () => console.log('[dc] data channel closed');
 
     dc.onmessage = (e) => {
       try {
@@ -95,38 +112,34 @@ export function useVoiceAssistant() {
       }
     };
 
-    // 4. Create SDP offer and exchange via server (avoids CORS on production)
+    // 5. Create SDP offer and proxy through our server to avoid CORS
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
     try {
-      const systemPrompt = buildSystemPrompt(recipe);
-      const connectRes = await fetch('/api/realtime-connect', {
+      const sdpRes = await fetch('/api/realtime-sdp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sdpOffer: offer.sdp, systemPrompt }),
+        body: JSON.stringify({ sdp: offer.sdp, token: clientSecret }),
       });
-      if (!connectRes.ok) throw new Error(await connectRes.text());
-      const { sdpAnswer } = await connectRes.json();
+      if (!sdpRes.ok) throw new Error(await sdpRes.text());
+      const { sdpAnswer } = await sdpRes.json();
       await pc.setRemoteDescription({ type: 'answer', sdp: sdpAnswer });
     } catch (err) {
-      console.error('Connect error:', err);
+      console.error('SDP error:', err);
       setError('Voice assistant unavailable. Please try again.');
       setStatus('error');
       stop();
       return;
     }
 
-    pc.oniceconnectionstatechange = () => console.log('[ice]', pc.iceConnectionState);
     pc.onconnectionstatechange = () => {
-      console.log('[pc]', pc.connectionState);
       if (pc.connectionState === 'connected') setStatus('connected');
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         setStatus('idle');
       }
     };
 
-    console.log('[rtc] remote description set, waiting for ICE...');
     setStatus('connected');
   }, [stop]);
 

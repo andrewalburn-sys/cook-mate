@@ -1,6 +1,7 @@
 {
   "functions": {
     "api/realtime-connect.js": { "maxDuration": 30 },
+    "api/realtime-sdp.js": { "maxDuration": 30 },
     "api/parse-recipe.js": { "maxDuration": 30 }
   },
   "rewrites": [
