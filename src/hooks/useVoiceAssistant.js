@@ -66,6 +66,7 @@ export function useVoiceAssistant() {
     dcRef.current = dc;
 
     dc.onopen = () => {
+      console.log('[dc] data channel opened');
       dc.send(JSON.stringify({
         type: 'conversation.item.create',
         item: {
@@ -76,6 +77,9 @@ export function useVoiceAssistant() {
       }));
       dc.send(JSON.stringify({ type: 'response.create' }));
     };
+
+    dc.onerror = (e) => console.error('[dc] error', e);
+    dc.onclose = () => console.log('[dc] data channel closed');
 
     dc.onmessage = (e) => {
       try {
@@ -113,13 +117,16 @@ export function useVoiceAssistant() {
       return;
     }
 
+    pc.oniceconnectionstatechange = () => console.log('[ice]', pc.iceConnectionState);
     pc.onconnectionstatechange = () => {
+      console.log('[pc]', pc.connectionState);
       if (pc.connectionState === 'connected') setStatus('connected');
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         setStatus('idle');
       }
     };
 
+    console.log('[rtc] remote description set, waiting for ICE...');
     setStatus('connected');
   }, [stop]);
 
