@@ -107,7 +107,10 @@ export default function RecipePage() {
 
           {isConnected || isConnecting ? (
             <>
-              {/* Timer — left */}
+              {/* Spacer — mirrors idle state to keep everything right-aligned */}
+              <div className="flex-1" />
+
+              {/* Timer */}
               <button
                 onClick={() => setShowTimerModal(true)}
                 className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-[#1a1a1a] transition-colors"
@@ -118,18 +121,15 @@ export default function RecipePage() {
                 Timer
               </button>
 
-              {/* Status pill — center */}
-              <div className="relative flex-1 sm:flex-none flex items-center justify-center">
-                {isConnected && !isMuted && voiceActivity === 'listening' && (
-                  <span className="absolute inset-0 rounded-full pointer-events-none" style={{ backgroundColor: '#c8302a', animation: 'pill-ring-listen 1.0s ease-out infinite' }} />
-                )}
-                {isConnected && !isMuted && voiceActivity === 'speaking' && (
-                  <span className="absolute inset-0 rounded-full pointer-events-none" style={{ backgroundColor: '#c8302a', animation: 'pill-ring-speak 2.4s ease-out infinite' }} />
+              {/* Status pill */}
+              <div className="relative flex items-center justify-center">
+                {isConnected && !isMuted && (
+                  <span className="absolute inset-0 rounded-full pointer-events-none" style={{ backgroundColor: '#c8302a', animation: voiceActivity === 'listening' ? 'pill-ring-listen 1.0s ease-out infinite' : voiceActivity === 'speaking' ? 'pill-ring-speak 2.4s ease-out infinite' : 'none' }} />
                 )}
                 <button
                   onClick={isConnected ? toggleMute : undefined}
                   disabled={isConnecting}
-                  className={`relative w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-white font-semibold text-sm transition-colors ${
+                  className={`relative flex items-center justify-center gap-3 px-6 py-3.5 rounded-full text-white font-semibold text-base transition-colors min-w-[168px] ${
                     isConnecting
                       ? 'bg-[#c8302a] opacity-75 cursor-default'
                       : isMuted
@@ -141,17 +141,13 @@ export default function RecipePage() {
                     <><Spinner /> Connecting…</>
                   ) : isMuted ? (
                     <><MicOffIcon /> Muted</>
-                  ) : voiceActivity === 'listening' ? (
-                    <><MicIcon /> Listening…</>
-                  ) : voiceActivity === 'speaking' ? (
-                    <><MicIcon /> Speaking…</>
                   ) : (
-                    <><MicIcon /> Tap to speak</>
+                    <><MicIcon /> Listening…</>
                   )}
                 </button>
               </div>
 
-              {/* End button — right */}
+              {/* End button */}
               <button
                 onClick={stopVoice}
                 className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 text-sm font-medium transition-colors"
