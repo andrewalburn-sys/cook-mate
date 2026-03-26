@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   }
 
   // ── Step 1: Fetch page content + OG image in parallel ──────────────────
-  let pageContent;
+  let pageContent = '';
   let ogImage = null;
 
   try {
@@ -70,8 +70,36 @@ export default async function handler(req, res) {
   // Check we got enough content to work with
   console.log(`[parse-recipe] Jina content length: ${pageContent.length} for ${url}`);
   if (pageContent.length < 500) {
-    console.error(`[parse-recipe] Content too short (${pageContent.length} chars) for ${url}`);
-    return res.status(422).json({ error: "Couldn't load this recipe. Try another URL." });
+    console.log(`[parse-recipe] Jina short content preview: ${pageContent.slice(0, 300)}`);
+    // Fallback: fetch the page directly and extract JSON-LD recipe data
+    console.log(`[parse-recipe] Trying direct fetch fallback for ${url}`);
+    try {
+      const directRes = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      });
+      if (directRes.ok) {
+        const html = await directRes.text();
+        // Extract JSON-LD blocks which contain structured recipe data
+        const jsonLdMatches = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+        const jsonLdContent = jsonLdMatches.map(m => m[1]).join('\n');
+        if (jsonLdContent.length > 200) {
+          console.log(`[parse-recipe] Direct fetch JSON-LD found: ${jsonLdContent.length} chars`);
+          pageContent = jsonLdContent;
+        } else {
+          console.log(`[parse-recipe] Direct fetch HTML length: ${html.length}`);
+          pageContent = html.slice(0, 20000);
+        }
+      }
+    } catch (err) {
+      console.error(`[parse-recipe] Direct fetch fallback failed:`, err);
+    }
+    if (pageContent.length < 200) {
+      return res.status(422).json({ error: "Couldn't load this recipe. Try another URL." });
+    }
   }
 
   // Trim to avoid excessive token usage — verbose sites (Serious Eats, NYT) need more headroom
