@@ -24,6 +24,10 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
+      const contentType = res.headers.get('content-type') ?? '';
+      if (!contentType.includes('application/json')) {
+        throw new Error(res.status === 504 ? 'This recipe took too long to load — please try again.' : 'Failed to load recipe');
+      }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to load recipe');
       await saveRecipe(data);

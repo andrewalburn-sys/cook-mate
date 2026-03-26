@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/parse-recipe.js": { "maxDuration": 30 }
+    "api/parse-recipe.js": { "maxDuration": 60 }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
