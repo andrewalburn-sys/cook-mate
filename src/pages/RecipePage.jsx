@@ -12,7 +12,7 @@ export default function RecipePage() {
   const recipe = state?.recipe ?? null;
 
   const [showTimerModal, setShowTimerModal] = useState(false);
-  const { status: voiceStatus, error: voiceError, voiceActivity, start: startVoice, stop: stopVoice } = useVoiceAssistant();
+  const { status: voiceStatus, error: voiceError, voiceActivity, isMuted, toggleMute, start: startVoice, stop: stopVoice } = useVoiceAssistant();
   const { timers, addTimer, pauseTimer, resumeTimer, removeTimer } = useTimers();
 
   const isConnected = voiceStatus === 'connected';
@@ -54,13 +54,13 @@ export default function RecipePage() {
   return (
     <div className="min-h-screen bg-white">
       <style>{`
-        @keyframes mic-ring-listen {
-          0%   { transform: scale(1);    opacity: 0.65; }
-          100% { transform: scale(1.9);  opacity: 0; }
+        @keyframes pill-ring-listen {
+          0%   { transform: scale(1);    opacity: 0.55; }
+          100% { transform: scale(1.16); opacity: 0; }
         }
-        @keyframes mic-ring-speak {
-          0%   { transform: scale(1);    opacity: 0.35; }
-          100% { transform: scale(1.55); opacity: 0; }
+        @keyframes pill-ring-speak {
+          0%   { transform: scale(1);    opacity: 0.3; }
+          100% { transform: scale(1.1);  opacity: 0; }
         }
       `}</style>
 
@@ -103,45 +103,83 @@ export default function RecipePage() {
 
       {/* Sticky bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 px-5 py-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <div className="flex-1" />
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
 
-          <button
-            onClick={() => setShowTimerModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-[#1a1a1a] transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/>
-            </svg>
-            Timer
-          </button>
+          {isConnected || isConnecting ? (
+            <>
+              {/* Timer — left */}
+              <button
+                onClick={() => setShowTimerModal(true)}
+                className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-[#1a1a1a] transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/>
+                </svg>
+                Timer
+              </button>
 
-          {isConnected ? (
-            <div className="relative flex items-center justify-center">
-              {voiceActivity === 'listening' && (
-                <span className="absolute w-14 h-14 rounded-full pointer-events-none" style={{ backgroundColor: '#c8302a', animation: 'mic-ring-listen 1.1s ease-out infinite' }} />
-              )}
-              {voiceActivity === 'speaking' && (
-                <span className="absolute w-14 h-14 rounded-full pointer-events-none" style={{ backgroundColor: '#c4a5a3', animation: 'mic-ring-speak 2.4s ease-out infinite' }} />
-              )}
+              {/* Status pill — center */}
+              <div className="relative flex-1 sm:flex-none flex items-center justify-center">
+                {isConnected && !isMuted && voiceActivity === 'listening' && (
+                  <span className="absolute inset-0 rounded-full pointer-events-none" style={{ backgroundColor: '#c8302a', animation: 'pill-ring-listen 1.0s ease-out infinite' }} />
+                )}
+                {isConnected && !isMuted && voiceActivity === 'speaking' && (
+                  <span className="absolute inset-0 rounded-full pointer-events-none" style={{ backgroundColor: '#c8302a', animation: 'pill-ring-speak 2.4s ease-out infinite' }} />
+                )}
+                <button
+                  onClick={isConnected ? toggleMute : undefined}
+                  disabled={isConnecting}
+                  className={`relative w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-white font-semibold text-sm transition-colors ${
+                    isConnecting
+                      ? 'bg-[#c8302a] opacity-75 cursor-default'
+                      : isMuted
+                      ? 'bg-gray-500 hover:bg-gray-600'
+                      : 'bg-[#c8302a] hover:bg-[#a8251f]'
+                  }`}
+                >
+                  {isConnecting ? (
+                    <><Spinner /> Connecting…</>
+                  ) : isMuted ? (
+                    <><MicOffIcon /> Muted</>
+                  ) : voiceActivity === 'listening' ? (
+                    <><MicIcon /> Listening…</>
+                  ) : voiceActivity === 'speaking' ? (
+                    <><MicIcon /> Speaking…</>
+                  ) : (
+                    <><MicIcon /> Tap to speak</>
+                  )}
+                </button>
+              </div>
+
+              {/* End button — right */}
               <button
                 onClick={stopVoice}
-                className="relative w-14 h-14 rounded-full bg-[#c8302a] hover:bg-[#a8251f] text-white flex items-center justify-center shadow-lg transition-colors"
-                aria-label="Stop cooking session"
+                className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 text-sm font-medium transition-colors"
               >
-                <MicIcon />
+                <XIcon />
+                End
               </button>
-            </div>
+            </>
           ) : (
-            <button
-              onClick={handleStartCooking}
-              disabled={isConnecting}
-              className="flex items-center gap-3 px-6 py-3.5 rounded-full bg-[#c8302a] hover:bg-[#a8251f]
-                text-white font-semibold text-base shadow-lg transition-colors
-                disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isConnecting ? <><Spinner /> Connecting…</> : <><MicIcon /> Start Cooking</>}
-            </button>
+            <>
+              {/* Idle state — unchanged */}
+              <div className="flex-1" />
+              <button
+                onClick={() => setShowTimerModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-[#1a1a1a] transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/>
+                </svg>
+                Timer
+              </button>
+              <button
+                onClick={handleStartCooking}
+                className="flex items-center gap-3 px-6 py-3.5 rounded-full bg-[#c8302a] hover:bg-[#a8251f] text-white font-semibold text-base shadow-lg transition-colors"
+              >
+                <MicIcon /> Start Cooking
+              </button>
+            </>
           )}
         </div>
 
@@ -169,6 +207,26 @@ function MicIcon() {
       <path d="M5 10a7 7 0 0014 0" strokeLinecap="round"/>
       <line x1="12" y1="17" x2="12" y2="22" strokeLinecap="round"/>
       <line x1="8" y1="22" x2="16" y2="22" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function MicOffIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+      <line x1="2" y1="2" x2="22" y2="22" strokeLinecap="round"/>
+      <path d="M18.89 13.23A7 7 0 0012 17a7 7 0 01-6.89-5.77" strokeLinecap="round"/>
+      <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V6a3 3 0 00-5.94-.6" strokeLinecap="round"/>
+      <line x1="12" y1="17" x2="12" y2="22" strokeLinecap="round"/>
+      <line x1="8" y1="22" x2="16" y2="22" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+      <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round"/>
     </svg>
   );
 }

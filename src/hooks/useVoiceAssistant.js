@@ -14,6 +14,7 @@ export function useVoiceAssistant() {
   const [error, setError] = useState(null);
   // 'idle' | 'listening' | 'speaking'
   const [voiceActivity, setVoiceActivity] = useState('idle');
+  const [isMuted, setIsMuted] = useState(false);
 
   const pcRef = useRef(null);       // RTCPeerConnection
   const dcRef = useRef(null);       // RTCDataChannel
@@ -35,6 +36,13 @@ export function useVoiceAssistant() {
     setStatus('idle');
     setError(null);
     setVoiceActivity('idle');
+    setIsMuted(false);
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    if (!streamRef.current) return;
+    streamRef.current.getTracks().forEach((t) => { t.enabled = !t.enabled; });
+    setIsMuted((prev) => !prev);
   }, []);
 
   const start = useCallback(async (recipe, onTimerCommand) => {
@@ -166,7 +174,7 @@ export function useVoiceAssistant() {
     setStatus('connected');
   }, [stop]);
 
-  return { status, error, voiceActivity, start, stop };
+  return { status, error, voiceActivity, isMuted, toggleMute, start, stop };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
