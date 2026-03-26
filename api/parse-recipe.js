@@ -68,7 +68,9 @@ export default async function handler(req, res) {
   }
 
   // Check we got enough content to work with
+  console.log(`[parse-recipe] Jina content length: ${pageContent.length} for ${url}`);
   if (pageContent.length < 500) {
+    console.error(`[parse-recipe] Content too short (${pageContent.length} chars) for ${url}`);
     return res.status(422).json({ error: "Couldn't load this recipe. Try another URL." });
   }
 
