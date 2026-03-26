@@ -102,8 +102,8 @@ export default async function handler(req, res) {
     }
   }
 
-  // Trim to avoid excessive token usage — verbose sites (Serious Eats, NYT) need more headroom
-  const trimmedContent = pageContent.slice(0, 20000);
+  // Trim to avoid excessive token usage — use full content up to 40000 chars
+  const trimmedContent = pageContent.slice(0, 40000);
 
   // ── Step 2: GPT-4o extracts structured recipe JSON ──────────────────────
   let recipe;
@@ -163,6 +163,7 @@ If you cannot find a complete recipe in the content, return: {"error": "No recip
     recipe = JSON.parse(cleaned);
 
     if (recipe.error) {
+      console.error(`[parse-recipe] GPT found no recipe for ${url}. Content length: ${trimmedContent.length}. Preview: ${trimmedContent.slice(0, 300)}`);
       return res.status(422).json({ error: "Couldn't find a recipe on that page. Try a direct recipe URL." });
     }
   } catch (err) {
